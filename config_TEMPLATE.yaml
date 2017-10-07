@@ -4,5 +4,6 @@ s3:
     default_bucket: caco_bucket1
     endpoint: http://localhost:8080
     tls: False
-    # region: "us-west-2"
+    secret_access_key:
+    access_key_id:
 api_url: http://localhost:9999/api/fileProcessing

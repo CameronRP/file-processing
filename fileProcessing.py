@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import boto3
 import requests
 import random
@@ -10,6 +11,9 @@ import os
 import uuid
 import yaml
 import cv2
+import time
+from botocore.client import ClientError
+import sys
 
 PROCESSING_FILE_NAME = "processingFile"
 PROCESSED_FILE_NAME = "processedFil.ogg"
@@ -20,11 +24,23 @@ with open("config.yaml") as stream:
         y = yaml.load(stream)
         BUCKET_NAME = y["s3"]["default_bucket"]
         ENDPOINT_URL = y["s3"]["endpoint"]
+        ACCESS_KEY_ID = y["s3"]["access_key_id"]
+        SECRET_ACCESS_KEY = y["s3"]["secret_access_key"]
         API_URL = y["api_url"]
     except yaml.YAMLError as exc:
         print(exc)
 
-s3 = boto3.resource('s3', endpoint_url=ENDPOINT_URL)
+s3 = boto3.resource(
+    's3',
+    endpoint_url = ENDPOINT_URL,
+    aws_access_key_id = ACCESS_KEY_ID,
+    aws_secret_access_key = SECRET_ACCESS_KEY)
+
+try:
+    s3.meta.client.head_bucket(Bucket=BUCKET_NAME)
+except ClientError:
+    print("Can't connect to bucket.")
+    sys.exit()
 
 def process_frame_to_rgb(frame):
     a = np.zeros((120, 160))
@@ -92,7 +108,7 @@ def thermalRaw_toOggVideo():
     r = requests.put(API_URL, data = params)
     print(r.status_code)
     print(r.json())
-
+    return True
 
 def getNewJob(recording_type, state):
     print("Getting a new job.")
@@ -118,4 +134,6 @@ def getNewJob(recording_type, state):
     download(recording['rawFileKey'], join(folder, PROCESSING_FILE_NAME))
     return folder, recording
 
-thermalRaw_toOggVideo()
+while True:
+    if not thermalRaw_toOggVideo():
+        time.sleep(10)
